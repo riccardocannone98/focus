@@ -54,7 +54,17 @@ class Config:
     banner_text: str = "Torna a concentrarti!"
     overlay_opacity: float = 0.6
 
-    # Calibrazione: nome angolo -> [iris_x, iris_y, yaw_deg, pitch_deg]
+    # Definizione dell'area (registrazione libera + ritocco)
+    recording_seconds: float = 20.0
+    outlier_percentiles: list[float] = field(default_factory=lambda: [5.0, 95.0])
+
+    # Registro eventi (solo tempi, mai immagini)
+    database_path: str = "data/focus_guard.db"
+
+    # Area di lavoro sulla mappa dello sguardo (scritta dalla finestra "Definisci area")
+    area: dict[str, float] | None = field(default=None)
+
+    # Vecchia calibrazione a 4 angoli: letta solo per migrarla in "area"
     calibration: dict[str, list[float]] | None = field(default=None)
 
     def validate(self) -> None:
@@ -76,6 +86,14 @@ class Config:
             raise ConfigError("music_volume deve essere in [0, 1]")
         if not 0.0 <= self.overlay_opacity <= 1.0:
             raise ConfigError("overlay_opacity deve essere in [0, 1]")
+        if self.recording_seconds <= 0:
+            raise ConfigError("recording_seconds deve essere > 0")
+        if len(self.outlier_percentiles) != 2 or not (
+            0.0 <= self.outlier_percentiles[0] < self.outlier_percentiles[1] <= 100.0
+        ):
+            raise ConfigError("outlier_percentiles deve essere [basso, alto] con 0 <= basso < alto <= 100")
+        if self.area is not None and not isinstance(self.area, dict):
+            raise ConfigError("area deve essere un oggetto")
         if self.calibration is not None:
             if set(self.calibration) != set(CORNER_NAMES):
                 raise ConfigError(f"calibration deve contenere gli angoli {CORNER_NAMES}")
