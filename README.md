@@ -19,9 +19,36 @@ musica in loop. Entrambi si fermano appena lo sguardo rientra.
   il file del modello; non invia alcun dato.
 - In **pausa** la webcam viene rilasciata del tutto: il LED si spegne.
 
-## Installazione
+## Avvio rapido con doppio click
 
 Requisiti: Python 3.10–3.12 (le versioni supportate da MediaPipe), una webcam.
+Su Windows, durante l'installazione di Python spunta **"Add python.exe to PATH"**.
+
+```bash
+git clone https://github.com/riccardocannone98/focus.git
+```
+
+Poi, nella cartella `focus`:
+
+- **macOS**: doppio click su **`avvia.command`**. La prima volta macOS può
+  bloccarlo perché non è firmato: clic destro → *Apri* → *Apri*. Se compare
+  "permesso negato", apri il Terminale nella cartella ed esegui una volta
+  `chmod +x avvia.command`.
+- **Windows**: doppio click su **`avvia.bat`**. Se SmartScreen avvisa,
+  scegli *Ulteriori informazioni* → *Esegui comunque*.
+
+Al **primo avvio** lo script crea l'ambiente `.venv`, installa i
+`requirements.txt` e scarica il modello MediaPipe. Servono alcuni minuti e la
+connessione internet. Dai successivi avvii attiva `.venv` e lancia subito
+`python -m focus_guard`. La finestra del terminale resta aperta mentre l'app
+gira, perché mostra i log: chiuderla chiude anche Focus Guard (in alternativa
+usa *Esci* dalla tray). In caso di errore la finestra resta aperta con il
+messaggio.
+
+Gli script passano eventuali argomenti all'app, ad esempio
+`./avvia.command --calibrate`.
+
+## Installazione manuale
 
 ```bash
 python -m venv .venv
@@ -136,6 +163,8 @@ focus_guard/
   __main__.py          CLI
 scripts/download_model.py
 tests/
+avvia.command         avvio con doppio click su macOS
+avvia.bat             avvio con doppio click su Windows
 ```
 
 ## Test
