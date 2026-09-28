@@ -1,4 +1,4 @@
-"""Icona nella system tray con menu pausa/riprendi, ricalibra, esci."""
+"""Icona nella system tray: dashboard, pausa/riprendi, ridefinisci area, esci."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ STATUS_COLORS = {
     "distracted": "#e53935",
     "returning": "#e53935",
     "paused": "#9e9e9e",
+    "stopped": "#9e9e9e",
     "uncalibrated": "#1e88e5",
     "error": "#6d4c41",
 }
@@ -37,6 +38,7 @@ def make_icon(color: str) -> QIcon:
 class TrayIcon(QSystemTrayIcon):
     pause_toggled = pyqtSignal(bool)  # True = pausa
     recalibrate_requested = pyqtSignal()
+    dashboard_requested = pyqtSignal()
     quit_requested = pyqtSignal()
 
     def __init__(self, parent=None) -> None:
@@ -46,15 +48,27 @@ class TrayIcon(QSystemTrayIcon):
         self._status_action = QAction("Avvio...", menu, enabled=False)
         self._pause_action = QAction("Pausa", menu, checkable=True)
         self._pause_action.toggled.connect(self._on_pause_toggled)
-        recalibrate = QAction("Ricalibra", menu)
+        dashboard = QAction("Apri dashboard", menu)
+        dashboard.triggered.connect(self.dashboard_requested)
+        recalibrate = QAction("Ridefinisci area", menu)
         recalibrate.triggered.connect(self.recalibrate_requested)
         quit_action = QAction("Esci", menu)
         quit_action.triggered.connect(self.quit_requested)
-        for item in (self._status_action, None, self._pause_action, recalibrate, None, quit_action):
+        for item in (
+            self._status_action, None, dashboard, self._pause_action, recalibrate, None, quit_action
+        ):
             menu.addSeparator() if item is None else menu.addAction(item)
         self._menu = menu  # riferimento esplicito: evita la garbage collection
         self.setContextMenu(menu)
-        self.set_status("uncalibrated", "Da calibrare")
+        self.set_status("uncalibrated", "Area da definire")
+        self.activated.connect(self._on_activated)
+
+    def _on_activated(self, reason) -> None:
+        if reason in (
+            QSystemTrayIcon.ActivationReason.Trigger,
+            QSystemTrayIcon.ActivationReason.DoubleClick,
+        ):
+            self.dashboard_requested.emit()
 
     def _on_pause_toggled(self, paused: bool) -> None:
         self._pause_action.setText("Riprendi" if paused else "Pausa")

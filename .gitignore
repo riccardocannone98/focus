@@ -15,3 +15,6 @@ assets/images/*
 !assets/images/.gitkeep
 assets/music/*
 !assets/music/.gitkeep
+
+# Registro eventi locale (SQLite)
+data/

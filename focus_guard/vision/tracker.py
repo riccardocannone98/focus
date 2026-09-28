@@ -1,8 +1,9 @@
 """Webcam + MediaPipe Face Landmarker.
 
-Privacy: i frame vivono solo in memoria dentro il loop di cattura, vengono
-scartati subito dopo l'elaborazione e non vengono mai scritti su disco né
-inviati altrove. Fuori da questo modulo escono solo numeri (GazeSample).
+Privacy: i frame vivono solo in memoria e non vengono mai scritti su disco
+né inviati altrove. Di norma dal thread escono solo numeri (GazeSample);
+solo mentre la finestra "Definisci area" è aperta viene emessa anche una
+copia ridotta del frame per l'anteprima a schermo, poi scartata.
 MediaPipe esegue il modello in locale; nessuna chiamata di rete.
 """
 
@@ -17,8 +18,8 @@ from pathlib import Path
 import numpy as np
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from focus_guard.logic.features import is_blinking, raw_gaze_from_landmarks
-from focus_guard.logic.geometry import RawGaze
+from focus_guard.logic.features import iris_circles, is_blinking, raw_gaze_from_landmarks
+from focus_guard.logic.area import RawGaze
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +29,11 @@ class GazeSample:
     timestamp: float  # time.monotonic()
     raw: RawGaze | None  # None = volto non rilevato
     blinking: bool = False
+    irises: tuple[tuple[float, float, float], ...] = ()  # solo per l'anteprima
+
+    @property
+    def face_found(self) -> bool:
+        return self.raw is not None
 
 
 class ModelNotFoundError(FileNotFoundError):
@@ -78,7 +84,12 @@ class FaceTracker:
         )
         height, width = rgb.shape[:2]
         raw = raw_gaze_from_landmarks(landmarks, (width, height), transform)
-        return GazeSample(timestamp, raw, is_blinking(blend, self._blink_threshold))
+        return GazeSample(
+            timestamp,
+            raw,
+            is_blinking(blend, self._blink_threshold),
+            iris_circles(landmarks, (width, height)),
+        )
 
     def close(self) -> None:
         self._landmarker.close()
@@ -88,7 +99,10 @@ class CameraWorker(QThread):
     """Thread di cattura: emette un GazeSample per ogni frame elaborato."""
 
     sample = pyqtSignal(object)
+    preview = pyqtSignal(object)  # np.ndarray RGB ridotto, solo in memoria
     failed = pyqtSignal(str)
+
+    PREVIEW_WIDTH = 320
 
     MAX_CONSECUTIVE_READ_FAILURES = 30
 
@@ -108,6 +122,8 @@ class CameraWorker(QThread):
         self._model_path = model_path
         self._blink_threshold = blink_threshold
         self._running = False
+        # Anteprima attiva solo mentre la finestra "Definisci area" è aperta
+        self.preview_enabled = False
 
     def stop(self) -> None:
         self._running = False
@@ -146,7 +162,11 @@ class CameraWorker(QThread):
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 del frame
                 result = tracker.process(rgb, time.monotonic())
-                del rgb  # nessun frame sopravvive a questa iterazione
+                if self.preview_enabled:
+                    h, w = rgb.shape[:2]
+                    size = (self.PREVIEW_WIDTH, max(1, h * self.PREVIEW_WIDTH // w))
+                    self.preview.emit(cv2.resize(rgb, size, interpolation=cv2.INTER_AREA))
+                del rgb  # il frame intero non sopravvive a questa iterazione
                 self.sample.emit(result)
                 remaining = self._period - (time.monotonic() - started)
                 if remaining > 0:
