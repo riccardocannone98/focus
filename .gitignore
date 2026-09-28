@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Configurazione e calibrazione personali
+config.json
+
+# Modello MediaPipe (scaricato con scripts/download_model.py)
+models/*.task
+
+# Contenuti personali
+assets/images/*
+!assets/images/.gitkeep
+assets/music/*
+!assets/music/.gitkeep
