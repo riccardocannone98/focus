@@ -63,3 +63,24 @@ def test_resolve_path(tmp_path):
     cfg = Config()
     assert cfg.resolve_path("assets/images", tmp_path) == tmp_path / "assets/images"
     assert cfg.resolve_path(str(tmp_path)) == tmp_path
+
+
+def test_area_and_new_defaults_roundtrip(tmp_path):
+    path = tmp_path / "config.json"
+    cfg = Config(area={"x_min": -0.6, "y_min": 0.0, "x_max": -0.4, "y_max": 0.1})
+    save_config(cfg, path)
+    loaded = load_config(path)
+    assert loaded.area == cfg.area
+    assert loaded.recording_seconds == 20.0
+    assert loaded.outlier_percentiles == [5.0, 95.0]
+
+
+@pytest.mark.parametrize(
+    "data",
+    [{"recording_seconds": 0}, {"outlier_percentiles": [95, 5]}, {"outlier_percentiles": [5]}, {"area": [1, 2]}],
+)
+def test_new_invalid_values(tmp_path, data):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps(data))
+    with pytest.raises(ConfigError):
+        load_config(path)

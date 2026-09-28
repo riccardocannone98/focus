@@ -3,3 +3,4 @@ opencv-python>=4.8
 mediapipe>=0.10.14
 PyQt6>=6.5
 pygame>=2.5
+matplotlib>=3.7

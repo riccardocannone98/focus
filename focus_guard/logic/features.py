@@ -11,11 +11,12 @@ from typing import Mapping, Sequence
 
 import numpy as np
 
-from focus_guard.logic.geometry import RawGaze
+from focus_guard.logic.area import RawGaze
 
 # Indici del modello a 478 punti (468 volto + 10 iride)
 EYE_CORNERS = ((33, 133), (362, 263))
 IRIS_CENTERS = (468, 473)
+IRIS_RINGS = ((469, 470, 471, 472), (474, 475, 476, 477))
 NUM_LANDMARKS_WITH_IRIS = 478
 BLINK_BLENDSHAPES = ("eyeBlinkLeft", "eyeBlinkRight")
 
@@ -80,6 +81,26 @@ def raw_gaze_from_landmarks(
     iris_y = sum(r[1] for r in ratios) / 2
     yaw, pitch = head_angles(transform)
     return iris_x, iris_y, yaw, pitch
+
+
+def iris_circles(
+    landmarks: np.ndarray, frame_size: tuple[int, int]
+) -> tuple[tuple[float, float, float], ...]:
+    """Cerchi delle iridi (cx, cy, r) normalizzati sulla larghezza/altezza del frame.
+
+    Servono solo per disegnare l'anteprima; il raggio è in frazione della larghezza.
+    """
+    pts = np.asarray(landmarks, dtype=float)
+    if pts.ndim != 2 or pts.shape[0] < NUM_LANDMARKS_WITH_IRIS:
+        return ()
+    width, height = frame_size
+    px = pts[:, :2] * np.array([width, height], dtype=float)
+    circles = []
+    for center, ring in zip(IRIS_CENTERS, IRIS_RINGS):
+        c = px[center]
+        r = float(np.mean([np.hypot(*(px[i] - c)) for i in ring]))
+        circles.append((float(pts[center, 0]), float(pts[center, 1]), r / width))
+    return tuple(circles)
 
 
 def is_blinking(blendshapes: Mapping[str, float] | None, threshold: float) -> bool:

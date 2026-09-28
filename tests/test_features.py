@@ -5,6 +5,7 @@ import pytest
 
 from focus_guard.logic.features import (
     GazeSmoother,
+    iris_circles,
     head_angles,
     is_blinking,
     raw_gaze_from_landmarks,
@@ -114,3 +115,16 @@ def test_smoother_ema_blink_hold_and_reset():
 def test_smoother_invalid_alpha():
     with pytest.raises(ValueError):
         GazeSmoother(0.0)
+
+
+def test_iris_circles():
+    pts = make_landmarks((4.0, 0.0))
+    for ring, center in (((469, 470, 471, 472), (284, 200)), ((474, 475, 476, 477), (364, 200))):
+        for i, (dx, dy) in zip(ring, ((5, 0), (0, 5), (-5, 0), (0, -5))):
+            pts[i] = ((center[0] + dx) / W, (center[1] + dy) / H, 0)
+    circles = iris_circles(pts, (W, H))
+    assert len(circles) == 2
+    for (cx, cy, r), (px, py) in zip(circles, ((284, 200), (364, 200))):
+        assert (cx * W, cy * H) == pytest.approx((px, py))
+        assert r * W == pytest.approx(5)
+    assert iris_circles(np.zeros((468, 3)), (W, H)) == ()

@@ -1,4 +1,4 @@
-"""Avvio: python -m focus_guard [--config PATH] [--calibrate] [-v]"""
+"""Avvio: python -m focus_guard [--config PATH] [--define-area] [--no-dashboard] [-v]"""
 
 from __future__ import annotations
 
@@ -14,7 +14,13 @@ from focus_guard.config import DEFAULT_CONFIG_PATH, ConfigError
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="focus_guard", description="Focus Guard")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
-    parser.add_argument("--calibrate", action="store_true", help="forza la calibrazione all'avvio")
+    parser.add_argument(
+        "--define-area", "--calibrate", dest="define_area", action="store_true",
+        help="apre subito la finestra di definizione dell'area",
+    )
+    parser.add_argument(
+        "--no-dashboard", action="store_true", help="avvia solo nella tray, senza aprire la dashboard"
+    )
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -43,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     keepalive = QTimer(interval=250, timeout=lambda: None)
     keepalive.start()
 
-    app.start(force_calibration=args.calibrate)
+    app.start(show_dashboard=not args.no_dashboard, define_area=args.define_area)
     return qapp.exec()
 
 
