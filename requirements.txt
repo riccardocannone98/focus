@@ -4,3 +4,4 @@ mediapipe>=0.10.14
 PyQt6>=6.5
 pygame>=2.5
 matplotlib>=3.7
+qtawesome>=1.3

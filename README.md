@@ -5,6 +5,8 @@ un'area definita (lo schermo, o una zona della scrivania). Dopo un ritardo
 configurabile mostra un banner con un'immagine casuale e fa partire una
 musica in loop. Entrambi si fermano appena lo sguardo rientra.
 
+![Dashboard, tema scuro](docs/screenshots/dark_1_dashboard.png)
+
 ## Privacy
 
 - Tutta l'elaborazione avviene **in locale**: OpenCV legge la webcam e il
@@ -87,6 +89,10 @@ All'avvio si apre la **dashboard** e parte il tracking. Chiudendo la
 dashboard l'app resta attiva nella **system tray**: click sull'icona o
 *Apri dashboard* per riaprirla, *Esci* per chiudere davvero.
 
+La barra laterale porta a **Dashboard**, **Definisci area** e
+**Impostazioni**. In fondo alla barra c'è l'interruttore **Tema scuro**: il
+tema predefinito è scuro e la scelta viene salvata in `config.json`.
+
 ### Definire l'area di lavoro
 
 Se non c'è ancora un'area (o premi *Ridefinisci area*) si apre la finestra
@@ -118,17 +124,24 @@ e non conta nei KPI.
 
 **Controllo**
 
-- stato attuale: tracking (attivo / fermo / in pausa fino alle hh:mm), sguardo
-  dentro/fuori area, volto rilevato sì/no, area definita;
-- *Avvia/Ferma tracking*: fermo = sessione chiusa e webcam spenta;
+- indicatore di stato ben visibile: **In focus** (verde), **Sguardo fuori…**
+  (giallo, prima del ritardo), **Distratto** (rosso), **In pausa** con l'ora di
+  ripresa, **Fermo** (grigio); sotto, sguardo dentro/fuori area, volto
+  rilevato sì/no e area definita;
+- interruttore a levetta **Tracking** per avviare o fermare: fermo = sessione
+  chiusa e webcam spenta;
 - *Pausa 15 / 30 / 60 min* (riprende da sola) e *Riprendi*;
 - *Ridefinisci area*;
 - cursori **Ritardo di attivazione [s]** (0,5–10) e **Margine di uscita
   [% lato area]** (0–50): hanno effetto subito e vengono salvati in
   `config.json`.
 
-**Statistiche**: filtro *Oggi / Ultimi 7 giorni / Ultimi 30 giorni*,
-aggiornamento automatico ogni 30 s.
+**Statistiche**: filtro *Oggi / 7 giorni / 30 giorni*, aggiornamento
+automatico ogni 30 s. Ogni KPI mostra la **variazione rispetto al periodo
+precedente**: stesso periodo spostato indietro della sua durata (oggi → ieri
+dalla mezzanotte alla stessa ora; 7 giorni → i 7 giorni prima). La freccia è
+**verde se l'indicatore migliora** e rossa se peggiora: meno distrazioni è
+verde anche se il numero scende.
 
 | KPI | Definizione |
 |---|---|
@@ -153,12 +166,50 @@ decimali con la virgola, UTF-8 con BOM.
 
 ### Tray e banner
 
-Il colore dell'icona indica lo stato: verde concentrato, arancio in uscita,
-rosso distratto, grigio in pausa o fermo, blu area da definire. Il menu offre
-*Apri dashboard*, *Pausa/Riprendi*, *Ridefinisci area* ed *Esci*.
+L'icona della tray cambia per stato: un badge con colore **e** simbolo
+(✓ in focus, ••• sguardo fuori, ! distratto, ‖ in pausa, ■ fermo, + area da
+definire, × errore webcam). Il menu offre *Apri dashboard*, *Pausa/Riprendi*,
+*Ridefinisci area* ed *Esci*.
 
-Il banner copre lo schermo ma è **trasparente a mouse e tastiera**: anche se
-il rilevamento sbagliasse, non blocca il lavoro.
+Il banner compare e scompare **con dissolvenza**. Mostra uno sfondo oscurato
+morbido, la foto in una card arrotondata, un **messaggio ironico** a rotazione
+(dieci frasi, mai due volte di fila) e il **tempo trascorso fuori area**, che
+scorre. Il testo di `banner_text` compare come sottotitolo. Il banner è
+**trasparente a mouse e tastiera**: anche se il rilevamento sbagliasse, non
+blocca il lavoro.
+
+## Aspetto
+
+Stile Fluent (Windows 11) con colore principale azzurro Windows, tema scuro
+e chiaro.
+
+- **Design system** in un unico file, `focus_guard/ui/theme.py`: palette dei
+  due temi come costanti (nessun colore scritto altrove), spaziature a
+  multipli di 8 px, raggi degli angoli, rampa tipografica e foglio di stile
+  globale.
+- **Carattere**: Segoe UI Variable (Display per i titoli, Text per il resto),
+  con Segoe UI come ripiego. Su sistemi senza Segoe si usano Open Sans o Noto
+  Sans.
+- **Icone** vettoriali Material Design tramite
+  [qtawesome](https://github.com/spyder-ide/qtawesome): 2,6 MB, solo Python,
+  nessuna dipendenza nativa. È l'unica nuova dipendenza. Icona dell'app e
+  icone della tray sono disegnate in vettoriale dal codice.
+- **KPI** in stile minimale (numeri grandi e leggeri separati da filetti);
+  card con angoli arrotondati e ombre leggere per controlli, grafici e
+  impostazioni; grafici matplotlib con colori, font e sfondo del tema.
+
+| | Tema scuro | Tema chiaro |
+|---|---|---|
+| Dashboard | ![](docs/screenshots/dark_1_dashboard.png) | ![](docs/screenshots/light_1_dashboard.png) |
+| Dashboard, distratto | ![](docs/screenshots/dark_2_dashboard_distratto_oggi.png) | ![](docs/screenshots/light_2_dashboard_distratto_oggi.png) |
+| Impostazioni | ![](docs/screenshots/dark_3_impostazioni.png) | ![](docs/screenshots/light_3_impostazioni.png) |
+| Definisci area | ![](docs/screenshots/dark_4_definisci_area.png) | ![](docs/screenshots/light_4_definisci_area.png) |
+| Banner | ![](docs/screenshots/dark_5_banner.png) | ![](docs/screenshots/light_5_banner.png) |
+
+![Icona dell'app e icone della tray](docs/screenshots/icone_app_e_tray.png)
+
+Gli screenshot sono generati in un ambiente Linux senza Segoe UI (al suo
+posto c'è Open Sans) e con dati, foto e webcam di esempio.
 
 ## Configurazione (`config.json`)
 
@@ -180,7 +231,8 @@ dashboard; le altre chiavi valgono al riavvio.
 | `camera_index`, `frame_width`, `frame_height`, `target_fps` | `0`, `640`, `480`, `15` | Webcam |
 | `images_dir`, `music_dir` | `assets/...` | Cartelle dei contenuti (relative al progetto o assolute) |
 | `music_volume`, `overlay_opacity` | `0.6`, `0.6` | 0–1 |
-| `banner_text` | `Torna a concentrarti!` | Testo del banner |
+| `banner_text` | `Torna a concentrarti!` | Sottotitolo del banner (il titolo è un messaggio ironico a rotazione) |
+| `theme` | `dark` | Tema dell'interfaccia: `dark` o `light` (interruttore nella dashboard) |
 | `database_path` | `data/focus_guard.db` | Registro eventi SQLite |
 | `area` | `null` | Scritta dalla finestra *Definisci area*: non modificarla a mano |
 
@@ -239,10 +291,14 @@ focus_guard/
   stats/kpi.py         aritmetica sugli intervalli e KPI                               (puro)
   vision/tracker.py    thread webcam + MediaPipe (frame solo in RAM)
   media.py             immagine casuale, MusicPlayer (pygame.mixer)
+  ui/theme.py          design system: palette scuro/chiaro, spaziature, font, stile globale
+  ui/widgets.py        componenti: card, interruttore, indicatore di stato, KPI, barra laterale
+  ui/icons.py          icona dell'app e icone della tray per stato (vettoriali)
+  ui/messages.py       messaggi ironici del banner e formato del tempo fuori area
   ui/area_window.py    anteprima webcam + mappa dello sguardo + ritocco
-  ui/dashboard.py      pannello di controllo, KPI, esportazione
-  ui/charts.py         grafici matplotlib
-  ui/overlay.py        banner sempre in primo piano, click-through
+  ui/dashboard.py      barra laterale, pannello di controllo, KPI, impostazioni, esportazione
+  ui/charts.py         grafici matplotlib coerenti con il tema
+  ui/overlay.py        banner con dissolvenza, sempre in primo piano, click-through
   ui/tray.py           icona e menu nella tray
   app.py               controller
   __main__.py          CLI
@@ -266,7 +322,11 @@ I test coprono:
   trascinamento (`test_area.py`);
 - KPI e aritmetica sugli intervalli, compresi pause, periodi e mezzanotte
   (`test_kpi.py`), e il registro SQLite con l'esportazione CSV (`test_store.py`);
-- feature da landmark sintetici, config, media e privacy.
+- feature da landmark sintetici, config, media e privacy;
+- interfaccia (`test_ui.py`): palette dei due temi, griglia a 8 px, cambio
+  tema salvato in config, messaggi a rotazione, banner che si nasconde subito
+  mentre la dissolvenza continua a parte, stati dell'indicatore, variazioni
+  KPI rispetto al periodo precedente, icone della tray diverse per stato.
 
 `test_app.py` prova i flussi completi con webcam, audio e orologi finti, usando
 Qt in modalità `offscreen`: definizione area → allarme → rientro, pause a

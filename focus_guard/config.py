@@ -58,6 +58,9 @@ class Config:
     recording_seconds: float = 20.0
     outlier_percentiles: list[float] = field(default_factory=lambda: [5.0, 95.0])
 
+    # Aspetto: "dark" o "light" (interruttore nella dashboard)
+    theme: str = "dark"
+
     # Registro eventi (solo tempi, mai immagini)
     database_path: str = "data/focus_guard.db"
 
@@ -86,6 +89,8 @@ class Config:
             raise ConfigError("music_volume deve essere in [0, 1]")
         if not 0.0 <= self.overlay_opacity <= 1.0:
             raise ConfigError("overlay_opacity deve essere in [0, 1]")
+        if self.theme not in ("dark", "light"):
+            raise ConfigError('theme deve essere "dark" o "light"')
         if self.recording_seconds <= 0:
             raise ConfigError("recording_seconds deve essere > 0")
         if len(self.outlier_percentiles) != 2 or not (

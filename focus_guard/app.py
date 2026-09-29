@@ -19,7 +19,9 @@ from focus_guard.media import IMAGE_EXTENSIONS, MusicPlayer, RandomPicker
 from focus_guard.stats.store import PAUSE, SESSION, EventLog
 from focus_guard.ui.area_window import AreaWindow
 from focus_guard.ui.dashboard import Dashboard, TrackingStatus
+from focus_guard.ui.icons import app_icon
 from focus_guard.ui.overlay import AlertOverlay
+from focus_guard.ui.theme import theme
 from focus_guard.ui.tray import TrayIcon
 from focus_guard.vision.tracker import CameraWorker, GazeSample
 
@@ -75,6 +77,11 @@ class FocusGuardApp(QObject):
         self._face: bool | None = None
         self._last_state: FocusState | None = None
 
+        theme.apply(self.cfg.theme)
+        app = QApplication.instance()
+        if app is not None:
+            app.setWindowIcon(app_icon())
+
         self.monitor = FocusMonitor(self._thresholds())
         self.episodes = EpisodeTracker()
         self.smoother = GazeSmoother(self.cfg.smoothing_alpha)
@@ -96,9 +103,11 @@ class FocusGuardApp(QObject):
         self.dashboard.define_area.connect(self.open_area_window)
         self.dashboard.activation_delay_changed.connect(self.set_activation_delay)
         self.dashboard.exit_margin_changed.connect(self.set_exit_margin)
+        self.dashboard.theme_toggled.connect(self.set_theme)
         self.dashboard.set_thresholds(
             self.cfg.activation_delay_s, self.cfg.exit_margin, self.cfg.reentry_margin
         )
+        self._update_settings_info()
 
         self.tray = TrayIcon()
         self.tray.pause_toggled.connect(self._on_tray_pause)
@@ -336,7 +345,8 @@ class FocusGuardApp(QObject):
         event = self.monitor.update(sample.timestamp, distance)
         self._log_episode(self.episodes.observe(prev, self.monitor.state, sample.timestamp))
         if event is FocusEvent.ALERT_ON:
-            self._set_alert(True)
+            started = self.episodes.started_at
+            self._set_alert(True, 0.0 if started is None else sample.timestamp - started)
         elif event is FocusEvent.ALERT_OFF:
             self._set_alert(False)
 
@@ -346,9 +356,9 @@ class FocusGuardApp(QObject):
             self._inside, self._face = inside, face
             self._push_status()
 
-    def _set_alert(self, active: bool) -> None:
+    def _set_alert(self, active: bool, elapsed_s: float = 0.0) -> None:
         if active:
-            self.overlay.show_alert(self.images.pick(), self.cfg.banner_text)
+            self.overlay.show_alert(self.images.pick(), self.cfg.banner_text, elapsed_s)
             self.music.play()
         else:
             self.music.stop()  # prima l'audio: stop immediato
@@ -363,6 +373,7 @@ class FocusGuardApp(QObject):
             inside=self._inside,
             face=self._face,
             area_defined=self.area is not None,
+            alert=self.monitor.alert_active,
         )
 
     def _push_status(self) -> None:
@@ -393,6 +404,29 @@ class FocusGuardApp(QObject):
 
     def _save_config(self) -> None:
         save_config(self.cfg, self.config_path)
+
+    # --- aspetto e impostazioni ------------------------------------------------
+    def set_theme(self, mode: str) -> None:
+        if mode == self.cfg.theme:
+            return
+        self.cfg.theme = mode
+        theme.apply(mode)
+        self._save_config()
+
+    def _update_settings_info(self) -> None:
+        c = self.cfg
+        db = c.resolve_path(c.database_path)
+        self.dashboard.set_info(
+            {
+                "reentry": f"{c.reentry_margin * 100:g}".replace(".", ","),
+                "reentry_delay": f"{c.reentry_delay_s:g}".replace(".", ","),
+                "face_lost": "conta come fuori area" if c.face_lost_counts_as_out else "ignorato",
+                "recording": f"{c.recording_seconds:g}".replace(".", ","),
+                "config": str(self.config_path),
+                "database": str(db),
+            },
+            data_folder=db.parent,
+        )
 
     # --- definizione area ------------------------------------------------
     def open_area_window(self) -> None:

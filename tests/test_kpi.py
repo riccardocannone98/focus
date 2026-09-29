@@ -144,3 +144,35 @@ def test_period_bounds():
 def test_days_in():
     assert days_in(ts(28, 0), ts(29, 0), UTC) == [date(2026, 9, 28)]
     assert len(days_in(*period_bounds("7d", ts(28, 12), UTC), UTC)) == 7
+
+
+# --- confronto con il periodo precedente -------------------------------------------
+
+from focus_guard.stats.kpi import compare, previous_bounds  # noqa: E402
+
+
+def test_previous_bounds_today_is_yesterday_until_same_hour():
+    now = ts(28, 15, 30)
+    assert previous_bounds("today", now, UTC) == (ts(27, 0), ts(27, 15, 30))
+
+
+def test_previous_bounds_7d_and_30d_same_duration_just_before():
+    now = ts(28, 15, 30)
+    lo, hi = period_bounds("7d", now, UTC)
+    plo, phi = previous_bounds("7d", now, UTC)
+    assert (plo, phi) == (ts(15, 0), ts(21, 15, 30))
+    assert phi - plo == hi - lo
+    plo30, _ = previous_bounds("30d", now, UTC)
+    assert plo30 == datetime(2026, 7, 31, tzinfo=UTC).timestamp()
+
+
+def test_compare():
+    up = compare(12, 10, higher_is_better=True)
+    assert up.diff == 2 and up.relative == pytest.approx(0.2) and up.improved is True
+    assert compare(12, 10, higher_is_better=False).improved is False  # es. più distrazioni
+    assert compare(8, 10, higher_is_better=False).improved is True
+    flat = compare(5, 5, True)
+    assert flat.diff == 0 and flat.improved is None
+    assert compare(3, 0, True).relative is None and compare(3, 0, True).improved is True
+    assert compare(None, 4, True) == compare(4, None, True)
+    assert compare(None, 4, True).diff is None
