@@ -37,6 +37,11 @@ class EpisodeTracker:
     def open(self) -> bool:
         return self._start is not None
 
+    @property
+    def started_at(self) -> float | None:
+        """Inizio dell'episodio aperto (stesso orologio dei campioni), None se chiuso."""
+        return self._start
+
     def observe(self, prev: FocusState, new: FocusState, now: float) -> Episode | None:
         """Da chiamare dopo ogni update del monitor (anche senza cambi di stato)."""
         if prev is FocusState.FOCUSED and new is not FocusState.FOCUSED:

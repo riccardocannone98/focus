@@ -172,3 +172,36 @@ def focus_rate_by_day(
         rate = compute_kpis(events, day_lo, day_hi).focus_rate_pct
         result.append((d, rate))
     return result
+
+
+# --- confronto con il periodo precedente ------------------------------------------
+
+def previous_bounds(period: str, now: float, tz: tzinfo | None = None) -> Interval:
+    """Stesso periodo spostato indietro della sua durata in giorni.
+
+    Oggi → ieri dalla mezzanotte alla stessa ora; 7 giorni → i 7 giorni
+    prima, fino alla stessa ora; idem per 30 giorni.
+    """
+    lo, hi = period_bounds(period, now, tz)
+    days = timedelta(days=PERIODS[period])
+    return (
+        (_local(lo, tz) - days).timestamp(),
+        (_local(hi, tz) - days).timestamp(),
+    )
+
+
+@dataclass(frozen=True)
+class Delta:
+    diff: float | None  # corrente - precedente (None se manca un valore)
+    relative: float | None  # variazione relativa (None se precedente = 0 o mancante)
+    improved: bool | None  # None = invariato o non confrontabile
+
+
+def compare(current: float | None, previous: float | None, higher_is_better: bool) -> Delta:
+    if current is None or previous is None:
+        return Delta(None, None, None)
+    diff = current - previous
+    relative = diff / previous if previous else None
+    if abs(diff) < 1e-9:
+        return Delta(0.0, 0.0 if previous else None, None)
+    return Delta(diff, relative, (diff > 0) == higher_is_better)
