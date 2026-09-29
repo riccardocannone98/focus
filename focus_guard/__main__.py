@@ -34,6 +34,14 @@ def main(argv: list[str] | None = None) -> int:
 
     from focus_guard.app import FocusGuardApp
 
+    if sys.platform == "win32":
+        try:
+            import ctypes
+
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("FocusGuard.App")
+        except (AttributeError, OSError):
+            pass
+
     qapp = QApplication(sys.argv[:1])
     qapp.setApplicationName("Focus Guard")
     qapp.setQuitOnLastWindowClosed(False)  # vive nella tray
